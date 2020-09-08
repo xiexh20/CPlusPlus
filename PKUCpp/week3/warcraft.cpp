@@ -1,4 +1,5 @@
 #include<iostream>
+#include <stdio.h>
 using namespace std;
 
 #define TOTAL_TYPES 5

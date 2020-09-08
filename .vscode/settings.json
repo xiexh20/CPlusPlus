@@ -2,5 +2,6 @@
     "files.associations": {
         "sstream": "c",
         "regex": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
 }

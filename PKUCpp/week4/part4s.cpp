@@ -150,6 +150,12 @@ const char *BigInt::to_string()
     for (startidx = size - 1; startidx >= 0; startidx--)
         if (num[startidx] > 0)
             break;
+    if(startidx<0){
+        // if this is exactly zero
+        str[0] = 0 + '0';
+        str[1] = '\0';
+        return str;
+    }
 
     for (int i = 0; i <= startidx; i++)
     {
@@ -369,7 +375,8 @@ BigInt& recursive_division(BigInt& dividend, BigInt& divisor)
         return *zero;   // if dividend is smaller than the divisor, return zero
     }
     
-    if(dividend.compare_to(divisor.shift_left(1))==LARGER){
+    int compare = dividend.compare_to(divisor.shift_left(1));
+    if(compare==EQUAL||compare==LARGER){
         // if the quotient is a value larger than 10, find the largest possible multiple of 10
         int size_diff = dividend.length() - divisor.length();        // the length difference of two number
         BigInt divisor_shifted = divisor.shift_left(size_diff);     // shift the divisor left (multiply with 10^size_diff)
@@ -387,7 +394,7 @@ BigInt& recursive_division(BigInt& dividend, BigInt& divisor)
     }
     else
     {
-        // the basic case: the quotient is smaller than 10
+        // the basic case: the quotient is smaller than 10, i.e. A<10B, A = qB + r
         int n = dividend.length();
         int a, b; // the dividend and divisor
         if (n - 2 < 0)
@@ -400,7 +407,13 @@ BigInt& recursive_division(BigInt& dividend, BigInt& divisor)
             b = divisor.num[n - 2];
             a = dividend.num[n - 1] * 10 + dividend.num[n - 2];
         }
-        int q = a / b;
+        int q;
+        if(b == 0){
+            q = 9;
+        }
+        else{
+            q = a / b;
+        }
         BigInt Q(q);
         BigInt T;
         T = Q * divisor;
@@ -434,54 +447,6 @@ BigInt &BigInt::operator/(BigInt &divisor)
     BigInt& q = recursive_division(A, B);
     q.set_sign(result_sign);
     return q;
-    // if (this->compare_to(divisor) == SMALLER)
-    // {
-    //     BigInt *zero = new BigInt("0");
-    //     return *zero;
-    // }
-    
-    // if(compare_to(divisor.shift_left(1))==LARGER){
-    //     // recursive call
-    //     int size_diff = length() - divisor.length();        // the length difference of two number
-    //     BigInt divisor_shifted = divisor.shift_left(size_diff);     // shift the divisor left (multiply with 10^size_diff)
-    //     while(compare_to(divisor_shifted)==SMALLER){
-    //         size_diff--;    // find the largest possible shift size
-    //         divisor_shifted = divisor.shift_left(size_diff);
-    //     }
-    //     BigInt one("1");
-    //     BigInt one_shifted = one.shift_left(size_diff);
-    //     return ((*this - divisor_shifted) / divisor) + one_shifted; // find smaller q + one_shifted
-        
-    // }
-    // else
-    // {
-    //     int n = length();
-    //     int a, b; // the dividend and divisor
-    //     if (n - 2 < 0)
-    //     {
-    //         b = divisor.num[0];
-    //         a = num[1] * 10 + num[0];
-    //     }
-    //     else
-    //     {
-    //         b = divisor.num[n - 2];
-    //         a = num[n - 1] * 10 + num[n - 2];
-    //     }
-    //     int q = a / b;
-    //     BigInt Q(q);
-    //     BigInt T;
-    //     T = Q * divisor;
-    //     while (T.compare_to(*this) == LARGER)
-    //     {
-    //         q--;
-    //         T = T - divisor;
-    //     }
-    //     BigInt *quotient = new BigInt(q);
-
-        
-
-    //     return *quotient;
-    // }
 }
 
 void test_shift()
@@ -508,14 +473,14 @@ void test_division()
     result = n1 / n2;
     printf("%s/%s=%s\n", n1.to_string(), n2.to_string(), result.to_string());
 
-    BigInt n3("9999");
-    BigInt n4("88");
+    BigInt n3("2512");
+    BigInt n4("12");
     result = n3 / n4;
 
     printf("%s/%s=%s\n", n3.to_string(), n4.to_string(), result.to_string());
 
-    BigInt n5("1100");
-    BigInt n6("98");
+    BigInt n5("1024");
+    BigInt n6("14");
     result = n5 / n6;
     printf("%s/%s=%s\n", n5.to_string(), n6.to_string(), result.to_string());
 
@@ -527,10 +492,22 @@ void test_division()
     result = n5 / n6;
     printf("%s/%s=%s\n", n5.to_string(), n6.to_string(), result.to_string());
 
-    BigInt n7("123456789012345678901234567890");
-    BigInt n8("9890");
+    BigInt n7("10");
+    BigInt n8("10");
     result = n7 / n8;
     printf("%s/%s=%s\n", n7.to_string(), n8.to_string(), result.to_string());
+
+    BigInt n9("10000");
+    BigInt n10("1000");
+    result = n9 / n10;
+    printf("%s/%s=%s\n", n9.to_string(), n10.to_string(), result.to_string());
+
+    BigInt n11("10000000000000000000000000000000000000000");
+    BigInt n12("10000000000");
+    result = n11 / n12;
+    printf("%s/%s=%s\n", n11.to_string(), n12.to_string(), result.to_string());
+
+    
 
 
 }
@@ -678,31 +655,31 @@ void test_constructor()
 
 int main()
 {
-    // char *str = new char[MAXSIZE];
-    // scanf("%s", str);
-    // int size = strlen(str);
-    // BigInt test(str);
-    // for(int i=0;i<test.length();i++){
-    //     cout<<test[i]<<endl;
-    // }
-    // printf("string=%s\n", test.to_string());
-
     // test_compare();
     // test_plusminus();
 
     // test_vector();
     // test_multiply();
-    test_shift();
-    test_division();
+    // test_shift();
+    // test_division();
 
     // BigInt t;
     // printf("size=%d\n", t.length());
 
-    // scanf("%ld\n%c\n%ld", &a, &op, &b);
-    // // scanf("\n", &op);
-    // // scanf("", &b);
-    // if(op=='+') printf("%ld", a+b);
-    // else if(op=='-') printf("%ld", a-b);
-    // else if(op=='*') printf("%ld", a*b);
-    // else printf("%ld", a/b);
+    char * left = new char[MAXSIZE];
+    char * right = new char[MAXSIZE];
+    char op;
+    scanf("%s\n%c\n%s", left, &op, right);
+    // printf("%s%c%s=", left, op, right);
+    BigInt a(left);
+    BigInt b(right);
+    BigInt result;
+    if(op=='+') result = a + b;
+    else if(op=='-') result = a - b;
+    else if(op=='*') result = a * b;
+    else result = a / b;
+
+    printf("%s\n", result.to_string());
+    return 0;
+
 }

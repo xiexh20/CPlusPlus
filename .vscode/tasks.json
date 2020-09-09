@@ -27,7 +27,7 @@
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}.exe",
-                "-Wall"
+                "-std=c++98"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

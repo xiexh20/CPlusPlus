@@ -21,15 +21,18 @@ private:
 public:
     BigInt() : num(0), sign(POSITIVE) {} // default constructor
     BigInt(vector<int> digits);          // construct from a digits vector
-    BigInt(const char *str);             // init with a string
-    BigInt(BigInt &that);                // copy constructor
+    BigInt(int value);
+    BigInt(const char *str); // init with a string
+    BigInt(BigInt &that);    // copy constructor
     // ~BigInt();  // destructor
     int compare_to(BigInt &that); // compare two number
     void set_sign(int sign_);
     BigInt &operator+(BigInt &that); // overload +
     BigInt &operator-(BigInt &that);
     BigInt &operator*(BigInt &that); // overload multiplication
-    // BigInt& operator /(BigInt& that);
+    BigInt &operator/(BigInt &that); // overload division
+    BigInt &shift_left(int stride);            // shift one digit left==multiply with 10
+    BigInt &shift_right(int stride);           // shift one digit right == divide by 10
     const char *to_string();
     // return the actual length of the integer
     int length()
@@ -39,7 +42,6 @@ public:
             if (num[startidx - 1] > 0)
                 return startidx;
         }
-
         return num.size();
     }
     int &operator[](int idx)
@@ -47,6 +49,42 @@ public:
         return num[idx];
     }
 };
+
+BigInt::BigInt(int value)
+{
+    // init with a single digit
+    sign = POSITIVE;
+    num.resize(1);
+    num[0] = value;
+}
+
+BigInt &BigInt::shift_left(int stride)
+{
+    BigInt *shifted = new BigInt(num);
+    int size = length(); // the actual length
+    shifted->num.resize(size + stride);
+    for (int i = size-1; i >= 0; i--)
+    {
+        shifted->num[i + stride] = shifted->num[i];
+    }
+    // clear lower digits to zero
+    for(int i=stride-1;i>=0;i--){
+        shifted->num[i] = 0;
+    }
+    return *shifted;
+}
+
+// TODO: not implemented correctly
+BigInt &BigInt::shift_right(int stride)
+{
+    BigInt *shifted = new BigInt(num);
+    int size = length(); // the actual length
+    for (int i = 0; i < size - 1; i++)
+    {
+        shifted->num[i] = shifted->num[i + 1];
+    }
+    return *shifted;
+}
 
 // TEST passed!
 BigInt::BigInt(vector<int> digits) : num(digits.size())
@@ -213,7 +251,7 @@ BigInt &BigInt::operator+(BigInt &that)
     }
 }
 
-//overload -
+//overload subtraction
 BigInt &BigInt::operator-(BigInt &that)
 {
     if (that.sign == NEGATIVE)
@@ -286,7 +324,7 @@ BigInt &BigInt::operator*(BigInt &that)
         factor_size = sizea;
     }
     vector<vector<int> > temp(factor_size, vector<int>(result_size)); //store intermediate results;
-    BigInt* result = new BigInt("0");                                                  // init sum to zero
+    BigInt *result = new BigInt("0");                                 // init sum to zero
     for (int i = 0; i < factor_size; i++)
     {
         // for each digit, perform multiplication
@@ -299,18 +337,107 @@ BigInt &BigInt::operator*(BigInt &that)
             temp[i][j + i] = product % 10; // do not forget the i shift
         }
         // also add the carry number
-        temp[i][A.size()+i] = carry[i+A.size()];
+        temp[i][A.size() + i] = carry[i + A.size()];
         BigInt tempr(temp[i]); // temp result
         *result = *result + tempr;
     }
-    if((sign==POSITIVE&&that.sign==POSITIVE)||(sign==NEGATIVE&&that.sign==NEGATIVE)){
+    if ((sign == POSITIVE && that.sign == POSITIVE) || (sign == NEGATIVE && that.sign == NEGATIVE))
+    {
         result->set_sign(POSITIVE);
     }
-    else{
+    else
+    {
         result->set_sign(NEGATIVE);
     }
-    
+
     return *result;
+}
+
+// overload division
+BigInt &BigInt::operator/(BigInt &divisor)
+{
+    if (this->compare_to(divisor) == SMALLER)
+    {
+        BigInt *zero = new BigInt("0");
+        return *zero;
+    }
+    
+    if(compare_to(divisor.shift_left(1))==LARGER){
+        // recursive call
+        int size_diff = length() - divisor.length();        // the length difference of two number
+        BigInt divisor_shifted = divisor.shift_left(size_diff);     // shift the divisor left (multiply with 10^size_diff)
+        while(compare_to(divisor_shifted)==SMALLER){
+            size_diff--;    // find the largest possible shift size
+            divisor_shifted = divisor.shift_left(size_diff);
+        }
+        BigInt one("1");
+        BigInt one_shifted = one.shift_left(size_diff);
+        return ((*this - divisor_shifted) / divisor) + one_shifted; // find smaller q + one_shifted
+        
+    }
+    else
+    {
+        int n = length();
+        int a, b; // the dividend and divisor
+        if (n - 2 < 0)
+        {
+            b = divisor.num[0];
+            a = num[1] * 10 + num[0];
+        }
+        else
+        {
+            b = divisor.num[n - 2];
+            a = num[n - 1] * 10 + num[n - 2];
+        }
+        int q = a / b;
+        BigInt Q(q);
+        BigInt T;
+        T = Q * divisor;
+        while (T.compare_to(*this) == LARGER)
+        {
+            q--;
+            T = T - divisor;
+        }
+        BigInt *quotient = new BigInt(q);
+        return *quotient;
+    }
+}
+
+void test_shift_left()
+{
+    BigInt n1("98");
+    for(int i=1;i<6;i++){
+        BigInt n1s = n1.shift_left(i);
+        printf("%s shifted to left by %d digits = %s \n", n1.to_string(), i, n1s.to_string());
+    }
+}
+
+void test_division()
+{
+    BigInt n1("122");
+    BigInt n2("11");
+    BigInt result;
+
+    result = n1 / n2;
+    printf("%s/%s=%s\n", n1.to_string(), n2.to_string(), result.to_string());
+
+    BigInt n3("9999");
+    BigInt n4("88");
+    result = n3 / n4;
+
+    printf("%s/%s=%s\n", n3.to_string(), n4.to_string(), result.to_string());
+
+    BigInt n5("1100");
+    BigInt n6("98");
+    result = n5 / n6;
+    printf("%s/%s=%s\n", n5.to_string(), n6.to_string(), result.to_string());
+
+    BigInt n7("123456789012345678901234567890");
+    BigInt n8("9890");
+    result = n7 / n8;
+    printf("%s/%s=%s\n", n7.to_string(), n8.to_string(), result.to_string());
+
+
 }
 
 void test_multiply()
@@ -319,17 +446,17 @@ void test_multiply()
     BigInt n2("12");
     BigInt result;
 
-    result = n1*n2;
+    result = n1 * n2;
     printf("positive times positive: %s*%s=%s\n", n1.to_string(), n2.to_string(), result.to_string());
 
     n1.set_sign(NEGATIVE);
-    result = n1*n2;
+    result = n1 * n2;
     printf("negative times positive: %s*%s=%s\n", n1.to_string(), n2.to_string(), result.to_string());
 
     printf("\n another pair of number:\n");
     BigInt n3("4567");
     BigInt n4("9999");
-    result = n3*n4;
+    result = n3 * n4;
     printf("%s*%s=%s\n", n3.to_string(), n4.to_string(), result.to_string());
 
     printf("\n another pair of number:\n");
@@ -337,7 +464,7 @@ void test_multiply()
     BigInt n6("999999999999");
     n5.set_sign(NEGATIVE);
     n6.set_sign(NEGATIVE);
-    result = n5*n6;
+    result = n5 * n6;
     printf("%s*%s=%s\n", n5.to_string(), n6.to_string(), result.to_string());
 }
 
@@ -469,7 +596,9 @@ int main()
     // test_plusminus();
 
     // test_vector();
-    test_multiply();
+    // test_multiply();
+    test_shift_left();
+    test_division();
 
     // BigInt t;
     // printf("size=%d\n", t.length());

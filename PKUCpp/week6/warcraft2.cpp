@@ -9,8 +9,10 @@ using namespace std;
 #define WOLF_IDX 2
 #define NINJA_IDX 3
 #define DRAGON_IDX 4
+
 #define TOTAL_TYPES 5
-#define INIT_VOLUMNE 5
+#define INIT_SIZE 0
+#define NUM_BUF_SIZE 10     // the size for the char buffer to print numbers
 
 #define SWORD 0
 #define BOMB 1
@@ -24,15 +26,18 @@ int blue_strength = 20;
 class Tribe;
 class Warrier;
 
+// some helper functions
+const char* decode_wtype(int wtype);
+const char* decode_weapon(int wid);
+
 
 
 // the base class
 class Warrier{
     public:
-        static int ph_cost; // this will be changed for each subtypes accordingly
         Warrier(int id_, int strength_):id(id_), strength(strength_){ red_strength -= strength_;}  // constructor
-        string born_msg();  // the message when this warrier is born
-        string born_extramsg(){return NULL;} // extra message, should be overloaded by derived classes
+        virtual string born_msg();  // the message when this warrier is born, polymorphism can be achieved by using virtual keyword
+        virtual string born_extramsg(){} // extra message, should be overloaded by derived classes
     
     protected:
         int id; // the id of this warrier
@@ -41,22 +46,22 @@ class Warrier{
 
 
 };
-int Warrier::ph_cost = 0;   // init the ph cost, but will be changed in cin
 
 // warriers derived from base class
 class Dragon:public Warrier{
     public:
+        static int ph_cost; // this will be changed for each subtypes accordingly
         Dragon(int id_, int strength_, float morale_):Warrier(id_, strength_), morale(morale_), weapon(id_%3){}
         string born_msg(){
             string name("dragon ");
             return name + Warrier::born_msg();
         }
         string born_extramsg(){
-            string msg("It has a arrow,and it's morale is ");
-            char char_morale[5];
-            snprintf(char_morale, 5, "%.2f", morale);
+            string msg1("It has a "), w(decode_weapon(weapon)), msg2(",and it's morale is ");
+            char char_morale[NUM_BUF_SIZE];
+            snprintf(char_morale, NUM_BUF_SIZE, "%.2f", morale);   // should give at least 6 chars to make sure enough to print xx.xx
             string str_morale(char_morale);
-            return msg+str_morale;
+            return msg1 + w + msg2 +str_morale;
         }
 
     private:
@@ -71,6 +76,7 @@ class Ninja:public Warrier{
         int weapon2;    // (id+1)%3
     
     public:
+        static int ph_cost; // this will be changed for each subtypes accordingly
         Ninja(int id_, int strength_):Warrier(id_, strength_){
             weapon1 = id%3;
             weapon2 = (id+1)%3;
@@ -87,14 +93,15 @@ class Iceman:public Warrier{
         int weapon;
 
     public:
+        static int ph_cost; // this will be changed for each subtypes accordingly
         Iceman(int id_, int strength_):Warrier(id_, strength_), weapon(id_%3){}
         string born_msg(){
             string name("iceman ");
             return name + Warrier::born_msg();
         }
         string born_extramsg(){
-            string msg("It has a sword");
-            return msg;
+            string msg("It has a "), w(decode_weapon(weapon));
+            return msg + w;
         }
 
 };
@@ -104,6 +111,7 @@ class Lion:public Warrier{
         int loyalty; 
     
     public:
+        static int ph_cost; // this will be changed for each subtypes accordingly    
         Lion(int id_, int strength_, int loyalty_):Warrier(id_, strength_), loyalty(loyalty_){}
         string born_msg(){
             string name("lion ");
@@ -111,8 +119,8 @@ class Lion:public Warrier{
         }
         string born_extramsg(){
             string msg("It's loyalty is ");
-            char char_loyalty[5];
-            snprintf(char_loyalty, 5, "%d", loyalty);
+            char char_loyalty[NUM_BUF_SIZE];
+            snprintf(char_loyalty, NUM_BUF_SIZE, "%d", loyalty);
             string str_loyalty(char_loyalty);
             return msg+str_loyalty;
         }
@@ -122,8 +130,24 @@ class Lion:public Warrier{
 class Wolf:public Warrier{
     //currently no extra atrributes
     public:
+        static int ph_cost; // this will be changed for each subtypes accordingly
         Wolf(int id_, int strength_):Warrier(id_, strength_){}
+        string born_extramsg(){ 
+            string empty("NULL");
+            return empty;
+        }
+        string born_msg(){
+            string name("wolf ");
+            return name + Warrier::born_msg();
+        }
 };
+
+// static variables
+int Dragon::ph_cost = 3;
+int Ninja::ph_cost = 4;
+int Iceman::ph_cost = 5;
+int Lion::ph_cost = 6;
+int Wolf::ph_cost = 7;
 
 
 class Tribe{
@@ -134,22 +158,101 @@ class Tribe{
         vector<vector<Warrier* > > warriers;
     
     public:
+        int nextw;   // next type of warrier to be produced
+        int ptries;  // number of attempts to produce a warrier, after 5 failure, stop production and print stop message
+        
         Tribe(int strength_, const char* name_):strength(strength_), aid(0), name(name_){
-            vector<vector<Warrier* > > temp(TOTAL_TYPES, vector<Warrier* >(INIT_VOLUMNE));
+            vector<vector<Warrier* > > temp(TOTAL_TYPES, vector<Warrier* >(INIT_SIZE));
             warriers = temp;
+            ptries = 0;
+            nextw = 0;  // start from zero
         }  // constructor
         int get_strength(){return strength;}
         string get_name(){return name;}
         // produce a warrier given specific type, return the pointer to the warrier, or NULL if not possible
-        Warrier* produce(int wtype);
+        bool produce(int t, int wtype);
+        string wcount_msg(int wtype);   // return n [warrier_type] in [name] headquarter
+        
 };
 /* functions for class Tribe::START */
-Warrier* Tribe::produce(int wtype)
+bool Tribe::produce(int t, int wtype)
 {
     Warrier * w;
-    w = new Dragon(1, 20, 0.5);
-    warriers[0].push_back(w);
-    cout<<warriers[0].back()->born_msg()<<endl; // remember to call .back() function to get the newly added warrier
+    // assign pointers to w based on the type
+    if(wtype==DRAGON_IDX){
+        if(strength<Dragon::ph_cost)   return false;
+        aid++;
+        strength -= Dragon::ph_cost;
+        w = new Dragon(aid, Dragon::ph_cost, 1.0*strength/Dragon::ph_cost);
+    }
+    else if(wtype==NINJA_IDX){
+        if(strength<Ninja::ph_cost) return false;
+        aid++;
+        strength -= Ninja::ph_cost;
+        w = new Ninja(aid, Ninja::ph_cost);
+    }
+    else if(wtype==ICEMAN_IDX){
+        if(strength<Iceman::ph_cost) return false;
+        aid++;
+        strength -= Iceman::ph_cost;
+        w = new Iceman(aid, Iceman::ph_cost);
+    }
+    else if(wtype==LION_IDX){
+        if(strength<Lion::ph_cost) return false;
+        aid++;
+        strength -= Lion::ph_cost;
+        w = new Lion(aid, Lion::ph_cost, strength);
+    }
+    else if(wtype==WOLF_IDX){
+        if(strength<Wolf::ph_cost) return false;
+        aid++;
+        strength -= Wolf::ph_cost;
+        w = new Wolf(aid, Wolf::ph_cost);
+
+    }
+
+    // successfully produced one warrier
+    ptries = 0;
+    nextw++;
+    if(nextw==TOTAL_TYPES)  nextw = 0;
+
+    warriers[wtype].push_back(w);   // add newly created warrier to the container
+
+    // print out event message
+    printf("%03d %s %s%s\n", t, name.c_str(), warriers[wtype].back()->born_msg().c_str(), wcount_msg(wtype).c_str());
+    // cout<< name <<" " <<warriers[wtype].back()->born_msg()<<wcount_msg(wtype)<<endl; // remember to call .back() function to get the newly added warrier
+    string msg = warriers[wtype].back()->born_extramsg();
+    if(msg.compare("NULL")!=0){
+        printf("%s\n", msg.c_str());
+        // cout<<msg<<endl;
+    }
+    
+    return true;
+    
+}
+
+const char* decode_wtype(int wtype)
+{
+    switch (wtype)
+    {
+    case DRAGON_IDX: return "dragon";
+    case NINJA_IDX: return "ninja";
+    case ICEMAN_IDX: return "iceman";
+    case LION_IDX: return "lion";
+    case WOLF_IDX: return "wolf";
+    default:    return NULL;
+    }
+}
+
+// return n [warrier_type] in [name] headquarter
+string Tribe::wcount_msg(int wtype)
+{
+    int n = warriers[wtype].size();
+    char char_n[NUM_BUF_SIZE];
+    snprintf(char_n, NUM_BUF_SIZE, "%d ", n);
+    string str_n(char_n), in(" in "), hq(" headquarter"), w(decode_wtype(wtype));
+    return str_n + w + in + get_name() + hq;
+    
 }
 /* functions for class Tribe::END */
 
@@ -159,9 +262,9 @@ Warrier* Tribe::produce(int wtype)
 string Warrier::born_msg()
 {
     string born(" born with strength ");
-    char char_id[5], char_stren[5];
-    snprintf(char_id, 5, "%d", id);
-    snprintf(char_stren, 5, "%d,", strength);
+    char char_id[NUM_BUF_SIZE], char_stren[NUM_BUF_SIZE];
+    snprintf(char_id, NUM_BUF_SIZE, "%d", id);
+    snprintf(char_stren, NUM_BUF_SIZE, "%d,", strength);
     string str_id(char_id), str_stren(char_stren);
     return str_id + born + str_stren;
 
@@ -208,20 +311,51 @@ string Ninja::born_extramsg()
 
 int main()
 {
-    cout<<Wolf::Warrier::ph_cost<<endl;
+    int red_worder[TOTAL_TYPES] = {ICEMAN_IDX, LION_IDX, WOLF_IDX, NINJA_IDX, DRAGON_IDX};
+    int blue_worder[TOTAL_TYPES] = {LION_IDX, DRAGON_IDX, NINJA_IDX, ICEMAN_IDX, WOLF_IDX};
 
-    Wolf::Warrier::ph_cost = 10;
-    Dragon::Warrier::ph_cost = 3;
-    cout<<Wolf::Warrier::ph_cost<<endl;
+    int tests;
+    scanf("%d", &tests);
     
-    // Dragon d(0, 2), d1(2, 2);
-    // cout<<d.born_msg()<<endl;
-    // cout<<d.born_extramsg()<<endl;
-    // cout<<d1.born_msg()<<endl;
-    // cout<<d1.born_extramsg()<<endl;
+    for(int test=0;test<tests;test++){
+        int total_ph;
+        scanf("%d", &total_ph);
+        scanf("%d %d %d %d %d", &Dragon::ph_cost, &Ninja::ph_cost, &Iceman::ph_cost, &Lion::ph_cost, &Wolf::ph_cost);
+        
+        Tribe red(total_ph, "red");
+        Tribe blue(total_ph, "blue");
+        int t = 0;
+        printf("Case:%d\n", test+1);
+        while(red.ptries<TOTAL_TYPES||blue.ptries<TOTAL_TYPES){
+            while(red.ptries<TOTAL_TYPES){
+                bool status = red.produce(t, red_worder[red.nextw]);    // try to produce a warrier
+                if(status)  break;  // successful
+                else{
+                    // unsucessful
+                    red.ptries++;
+                    if(red.ptries==TOTAL_TYPES) printf("%03d red headquarter stops making warriors\n", t);
+                    red.nextw++;
+                    if(red.nextw==TOTAL_TYPES)  red.nextw = 0;
+                }
+            }
 
-    Tribe red(100, "red");
-    red.produce(0);
+            while(blue.ptries<TOTAL_TYPES){
+                bool status = blue.produce(t, blue_worder[blue.nextw]);    // try to produce a warrier
+                if(status)  break;  // successful
+                else{
+                    // unsucessful
+                    blue.ptries++;
+                    if(blue.ptries==TOTAL_TYPES) printf("%03d blue headquarter stops making warriors\n", t);
+                    blue.nextw++;
+                    if(blue.nextw==TOTAL_TYPES)  blue.nextw = 0;
+                }
+            }
+
+            t++;
+
+        }
+    }
+    
 
     return 0;
 

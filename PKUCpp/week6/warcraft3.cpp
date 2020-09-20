@@ -329,6 +329,10 @@ int main()
         Tribe blue(total_ph, "blue");
         int t = 0;
         printf("Case:%d\n", test+1);
+        Dragon d(1, 20, 20);
+        
+        
+        
 
         // sequences of events, notation h-min
 

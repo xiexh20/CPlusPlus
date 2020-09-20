@@ -27,7 +27,7 @@ int main()
     int opfound[] = {0,0,0, 0, 0, 0, 0, 0};
     int n;
     cin>>n;
-    cout<<"n="<<n<<endl;
+    // cout<<"n="<<n<<endl;
 
     // read input strings
     string** strs = new string*[n+1];
@@ -37,10 +37,10 @@ int main()
         strs[i] = new string(buf);
     }
 
-    cout<<"input strings:"<<endl;
-    for(int i=1;i<=n;i++){
-        cout<<*strs[i]<<":"<<strs[i]->length()<<endl;
-    }
+    // cout<<"input strings:"<<endl;
+    // for(int i=1;i<=n;i++){
+    //     cout<<*strs[i]<<":"<<strs[i]->length()<<endl;
+    // }
 
     bool resume = true;
     do

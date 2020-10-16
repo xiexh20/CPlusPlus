@@ -131,7 +131,10 @@ int main()
                             string sum = s1 + s2;
                             operands.push(sum);
                         }
-                        opfound[opstack.top()]++;
+                        if(opstack.size()>=1){
+                            opfound[opstack.top()]++;
+                        }
+                        
                     }
                     else if(operation==FIND){
                         // find S N
@@ -139,15 +142,19 @@ int main()
                         operands.pop();
                         string S = operands.top();
                         operands.pop();
-                        int pos = strs[N]->find(S);
-                        if(pos==string::npos){
-                            pos = strs[N]->length();    
+
+                        if(opstack.size()>=1){
+                            int pos = strs[N]->find(S);
+                            if(pos==string::npos){
+                                pos = strs[N]->length();    
+                            }
+                            char nbuf[5];
+                            snprintf(nbuf, 5, "%d", pos);
+                            string spos(nbuf);
+                            operands.push(spos);
+                            if(opstack.size()>=1) opfound[opstack.top()]++;
                         }
-                        char nbuf[5];
-                        snprintf(nbuf, 5, "%d", pos);
-                        string spos(nbuf);
-                        operands.push(spos);
-                        opfound[opstack.top()]++;
+                        
                     }
                     else if(operation==RFIND){
                         // rfind S N
@@ -155,6 +162,7 @@ int main()
                         operands.pop();
                         string S = operands.top();
                         operands.pop();
+                        
                         int pos = strs[N]->rfind(S);
                         if(pos==string::npos){
                             pos = strs[N]->length();    
@@ -162,8 +170,11 @@ int main()
                         char nbuf[5];
                         snprintf(nbuf, 5, "%d", pos);
                         string spos(nbuf);
-                        operands.push(spos);    // push returned value back to stack
-                        opfound[opstack.top()]++;
+                        if(opstack.size()>=1){
+                            operands.push(spos);    // push returned value back to stack
+                            opfound[opstack.top()]++;
+                        }
+                        
 
                     }
                     else if(operation==INSERT){
@@ -202,6 +213,8 @@ int main()
                 }
                 cut = strtok(NULL, " ");
             }
+            stack<string> empty;
+            operands = empty;
             // cout<<operands.top()<<endl;
             // operands.pop();
             // while(pos!=string::npos){
